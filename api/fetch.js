@@ -19,6 +19,20 @@ const client = axios.create({
   maxRedirects: 5
 });
 
+async function getSession() {
+  const sessionRes = await client.get('https://uafix.net/search.html?do=search');
+  const rawCookies = sessionRes.headers['set-cookie'] || [];
+  const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ');
+  return cookieStr ? cookieStr + '; b=b' : 'b=b';
+}
+
+function getReferer(url) {
+  if (url.includes('/serials/')) {
+    return url.replace(/\/season-\d+-episode-\d+\/$/, '/').replace(/\/sezon-\d+\/$/, '/');
+  }
+  return 'https://uafix.net/';
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -28,31 +42,37 @@ module.exports = async (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send('Missing ?url=');
 
-  const viewedId = req.query.viewed_id || null;
+  const isEpisode = req.query.episode === '1';
 
   try {
-    // Крок 1: отримати PHPSESSID з пошукової форми
-    const sessionRes = await client.get('https://uafix.net/search.html?do=search');
-    const rawCookies = sessionRes.headers['set-cookie'] || [];
-    const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ');
-    const viewedCookie = viewedId ? `viewed_ids=${viewedId}` : '';
-    const fullCookie = [cookieStr, 'b=b', viewedCookie].filter(Boolean).join('; ');
+    const sessionCookie = await getSession();
+    const referer = getReferer(url);
 
-    // Визначаємо Referer залежно від типу URL
-    const isSerial = url.includes('/serials/');
-    const referer = isSerial
-      ? url.replace(/\/season-\d+-episode-\d+\/$/, '/').replace(/\/sezon-\d+\/$/, '/')
-      : 'https://uafix.net/';
+    if (isEpisode) {
+      // Крок 1: перший запит з тим самим сесійним cookie — отримуємо post_id
+      const first = await client.get(url, {
+        headers: { 'Referer': referer, 'Cookie': sessionCookie }
+      });
+      const postIdMatch = first.data.match(/name="post_id"[^>]+value="(\d+)"/);
+      const postId = postIdMatch ? postIdMatch[1] : null;
 
-    // Крок 2: виконати цільовий запит з cookie
-    const response = await client.get(url, {
-      headers: {
-        'Referer': referer,
-        'Cookie': fullCookie
+      if (!postId) {
+        res.send(first.data);
+        return;
       }
-    });
 
-    res.send(response.data);
+      // Крок 2: другий запит з тим самим PHPSESSID + viewed_ids
+      const secondCookie = sessionCookie + `; viewed_ids=${postId}`;
+      const second = await client.get(url, {
+        headers: { 'Referer': referer, 'Cookie': secondCookie }
+      });
+      res.send(second.data);
+    } else {
+      const response = await client.get(url, {
+        headers: { 'Referer': referer, 'Cookie': sessionCookie }
+      });
+      res.send(response.data);
+    }
   } catch (e) {
     res.status(500).send(e.message);
   }

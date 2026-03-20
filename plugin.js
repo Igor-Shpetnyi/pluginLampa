@@ -56,29 +56,37 @@
     return seasons;
   }
 
-  function requestWithViewed(url, postId, callback) {
-    fetch(PROXY + encodeURIComponent(url) + '&viewed_id=' + postId)
+  function requestEpisode(url, callback) {
+    fetch(PROXY + encodeURIComponent(url) + '&episode=1')
       .then(function (r) { return r.text(); })
       .then(callback)
       .catch(function (err) { Lampa.Noty.show('Помилка: ' + err.message); });
   }
 
+  function extractM3u8Direct(html) {
+    // Шукаємо <video src="...m3u8"> або file:"...m3u8"
+    var match = html.match(/[<\s]src="(https?:\/\/[^"]+\.m3u8)"/);
+    if (match) return match[1];
+    match = html.match(/file:"(https?:\/\/[^"]+\.m3u8)"/);
+    return match ? match[1] : null;
+  }
+
   function playEpisode(url, title) {
     Lampa.Noty.show('Завантаження серії\u2026');
-    // Крок 1: отримати post_id зі сторінки серії
-    request(url, function (html) {
-      var postIdMatch = html.match(/name="post_id"[^>]+value="(\d+)"/);
-      var postId = postIdMatch ? postIdMatch[1] : null;
-      if (!postId) { Lampa.Noty.show('Плеєр не знайдено'); return; }
-      // Крок 2: повторний запит з viewed_ids щоб отримати zetvideo iframe
-      requestWithViewed(url, postId, function (html2) {
-        var zetId = extractZetvideoId(html2);
-        if (!zetId) { Lampa.Noty.show('Плеєр не знайдено'); return; }
-        request(ZETVIDEO + '/vod/' + zetId, function (zetHtml) {
-          var m3u8 = extractM3u8(zetHtml);
-          if (!m3u8) { Lampa.Noty.show('Потік не знайдено'); return; }
-          Lampa.Player.play({ url: m3u8, title: title });
-        });
+    requestEpisode(url, function (html) {
+      // Спочатку шукаємо прямий m3u8
+      var m3u8 = extractM3u8Direct(html);
+      if (m3u8) {
+        Lampa.Player.play({ url: m3u8, title: title });
+        return;
+      }
+      // Якщо ні — шукаємо zetvideo ID і йдемо через zetvideo
+      var zetId = extractZetvideoId(html);
+      if (!zetId) { Lampa.Noty.show('Плеєр не знайдено'); return; }
+      request(ZETVIDEO + '/vod/' + zetId, function (zetHtml) {
+        var m3u8z = extractM3u8(zetHtml);
+        if (!m3u8z) { Lampa.Noty.show('Потік не знайдено'); return; }
+        Lampa.Player.play({ url: m3u8z, title: title });
       });
     });
   }
