@@ -1,21 +1,28 @@
 (function () {
   'use strict';
 
-  var UAFLIX = 'https://uaflix.net';
+  var UAFLIX = 'https://uafix.net';
   var ZETVIDEO = 'https://zetvideo.net';
 
   // На Android TV CORS не потрібен, в браузері — локальний проксі
-  var IS_BROWSER = !window.Android && !window.cordova;
-  var LOCAL_PROXY = 'http://localhost:3000/fetch?url=';
+  var PROXY = 'https://pluginlampa-production-48cf.up.railway.app/fetch?url=';
 
   function request(url, callback) {
-    var fetchUrl = IS_BROWSER ? LOCAL_PROXY + encodeURIComponent(url) : url;
-    fetch(fetchUrl)
+    fetch(PROXY + encodeURIComponent(url))
       .then(function (r) { return r.text(); })
       .then(callback)
-      .catch(function (err) {
-        Lampa.Noty.show('[UAflix] \u041f\u043e\u043c\u0438\u043b\u043a\u0430: ' + err.message);
-      });
+      .catch(function (err) { Lampa.Noty.show('[UAflix] ' + err.message); });
+  }
+
+  function requestPost(url, body, callback) {
+    fetch(PROXY + encodeURIComponent(url), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body
+    })
+      .then(function (r) { return r.text(); })
+      .then(callback)
+      .catch(function (err) { Lampa.Noty.show('[UAflix] ' + err.message); });
   }
 
   function extractZetvideoId(html) {
@@ -30,18 +37,16 @@
 
   function extractFilmUrl(html) {
     // Шукаємо перший результат пошуку — посилання на сторінку фільму
-    var match = html.match(/href="(https:\/\/uaflix\.net\/film\/[^"]+)"/);
+    var match = html.match(/href="(https?:\/\/uafix\.net\/film\/[^"]+)"/);
     return match ? match[1] : null;
   }
 
   function playFilm(movie) {
     var title = movie.original_title || movie.title;
-    var searchUrl = UAFLIX + '/?s=' + encodeURIComponent(title);
-
     Lampa.Noty.show('\u041f\u043e\u0448\u0443\u043a \u043d\u0430 UAflix\u2026');
 
-    // Крок 1: пошук фільму на uaflix.net
-    request(searchUrl, function (searchHtml) {
+    // Крок 1: пошук фільму на uaflix.net (POST)
+    requestPost(UAFLIX + '/search.html', 'do=search&subaction=search&story=' + encodeURIComponent(title), function (searchHtml) {
       console.log('[UAflix] search HTML (500 chars):', searchHtml.slice(0, 500));
       var filmUrl = extractFilmUrl(searchHtml);
       if (!filmUrl) {

@@ -16,12 +16,22 @@ app.options('*', (req, res) => {
   res.sendStatus(200);
 });
 
-app.get('/fetch', async (req, res) => {
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+app.all('/fetch', async (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send('Missing ?url=');
   try {
-    const response = await axios.get(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
+    const isPost = req.method === 'POST';
+    const response = await axios({
+      method: isPost ? 'post' : 'get',
+      url,
+      data: isPost ? req.body : undefined,
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Content-Type': isPost ? 'application/x-www-form-urlencoded' : undefined
+      },
       responseType: 'text'
     });
     res.send(response.data);
