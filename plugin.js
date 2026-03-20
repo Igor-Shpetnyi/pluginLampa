@@ -5,7 +5,7 @@
   var ZETVIDEO = 'https://zetvideo.net';
 
   // На Android TV CORS не потрібен, в браузері — локальний проксі
-  var PROXY = 'https://pluginlampa-production-48cf.up.railway.app/fetch?url=';
+  var PROXY = 'https://plugin-lampa.vercel.app/api/fetch?url=';
 
   function request(url, callback) {
     fetch(PROXY + encodeURIComponent(url))
@@ -14,18 +14,7 @@
       .catch(function (err) { Lampa.Noty.show('[UAflix] ' + err.message); });
   }
 
-  function requestPost(url, body, callback) {
-    fetch(PROXY + encodeURIComponent(url), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body
-    })
-      .then(function (r) { return r.text(); })
-      .then(callback)
-      .catch(function (err) { Lampa.Noty.show('[UAflix] ' + err.message); });
-  }
-
-  function extractZetvideoId(html) {
+function extractZetvideoId(html) {
     var match = html.match(/zetvideo\.net\/vod\/(\d+)/);
     return match ? match[1] : null;
   }
@@ -42,11 +31,12 @@
   }
 
   function playFilm(movie) {
-    var title = movie.original_title || movie.title;
+    var title = movie.title || movie.original_title;
     Lampa.Noty.show('\u041f\u043e\u0448\u0443\u043a \u043d\u0430 UAflix\u2026');
 
-    // Крок 1: пошук фільму на uaflix.net (POST)
-    requestPost(UAFLIX + '/search.html', 'do=search&subaction=search&story=' + encodeURIComponent(title), function (searchHtml) {
+    // Крок 1: пошук фільму на uaflix.net (GET)
+    var searchUrl = UAFLIX + '/index.php?do=search&subaction=search&search_start=0&full_search=0&result_from=1&story=' + encodeURIComponent(title);
+    request(searchUrl, function (searchHtml) {
       console.log('[UAflix] search HTML (500 chars):', searchHtml.slice(0, 500));
       var filmUrl = extractFilmUrl(searchHtml);
       if (!filmUrl) {

@@ -30,6 +30,8 @@ app.all('/fetch', async (req, res) => {
       data: isPost ? req.body : undefined,
       headers: {
         'User-Agent': 'Mozilla/5.0',
+        'Referer': 'https://uafix.net/search.html?do=search',
+        'Origin': 'https://uafix.net',
         'Content-Type': isPost ? 'application/x-www-form-urlencoded' : undefined
       },
       responseType: 'text'
