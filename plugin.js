@@ -56,15 +56,29 @@
     return seasons;
   }
 
+  function requestWithViewed(url, postId, callback) {
+    fetch(PROXY + encodeURIComponent(url) + '&viewed_id=' + postId)
+      .then(function (r) { return r.text(); })
+      .then(callback)
+      .catch(function (err) { Lampa.Noty.show('Помилка: ' + err.message); });
+  }
+
   function playEpisode(url, title) {
     Lampa.Noty.show('Завантаження серії\u2026');
+    // Крок 1: отримати post_id зі сторінки серії
     request(url, function (html) {
-      var zetId = extractZetvideoId(html);
-      if (!zetId) { Lampa.Noty.show('Плеєр не знайдено'); return; }
-      request(ZETVIDEO + '/vod/' + zetId, function (zetHtml) {
-        var m3u8 = extractM3u8(zetHtml);
-        if (!m3u8) { Lampa.Noty.show('Потік не знайдено'); return; }
-        Lampa.Player.play({ url: m3u8, title: title });
+      var postIdMatch = html.match(/name="post_id"[^>]+value="(\d+)"/);
+      var postId = postIdMatch ? postIdMatch[1] : null;
+      if (!postId) { Lampa.Noty.show('Плеєр не знайдено'); return; }
+      // Крок 2: повторний запит з viewed_ids щоб отримати zetvideo iframe
+      requestWithViewed(url, postId, function (html2) {
+        var zetId = extractZetvideoId(html2);
+        if (!zetId) { Lampa.Noty.show('Плеєр не знайдено'); return; }
+        request(ZETVIDEO + '/vod/' + zetId, function (zetHtml) {
+          var m3u8 = extractM3u8(zetHtml);
+          if (!m3u8) { Lampa.Noty.show('Потік не знайдено'); return; }
+          Lampa.Player.play({ url: m3u8, title: title });
+        });
       });
     });
   }

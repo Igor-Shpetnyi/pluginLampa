@@ -28,12 +28,15 @@ module.exports = async (req, res) => {
   const url = req.query.url;
   if (!url) return res.status(400).send('Missing ?url=');
 
+  const viewedId = req.query.viewed_id || null;
+
   try {
     // Крок 1: отримати PHPSESSID з пошукової форми
     const sessionRes = await client.get('https://uafix.net/search.html?do=search');
     const rawCookies = sessionRes.headers['set-cookie'] || [];
     const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ');
-    const fullCookie = cookieStr + (cookieStr ? '; ' : '') + 'b=b';
+    const viewedCookie = viewedId ? `viewed_ids=${viewedId}` : '';
+    const fullCookie = [cookieStr, 'b=b', viewedCookie].filter(Boolean).join('; ');
 
     // Визначаємо Referer залежно від типу URL
     const isSerial = url.includes('/serials/');
