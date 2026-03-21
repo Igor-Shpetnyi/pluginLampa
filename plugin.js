@@ -5,7 +5,7 @@
   var UAFIX = 'https://uafix.net';           // сайт з фільмами і серіалами
   var ZETVIDEO = 'https://zetvideo.net';     // відеохостинг де зберігаються m3u8 потоки
   var PROXY = 'https://plugin-lampa.vercel.app/api/fetch?url='; // наш проксі (обхід CORS для uafix/zetvideo)
-  var PROXY2 = 'https://corsproxy.io/?url='; // альтернативний проксі для episode сторінок
+  var PROXY2 = 'https://lampa.igor-shpetnyi.workers.dev/?url='; // альтернативний проксі для episode сторінок
   var PASSWORD = '0308';                     // пароль для доступу до плагіна
 
   // ─── HTTP запити ─────────────────────────────────────────────────────────────
