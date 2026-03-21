@@ -1,9 +1,11 @@
+/*
 (function () {
   'use strict';
 
   var UAFIX = 'https://uafix.net';
   var ZETVIDEO = 'https://zetvideo.net';
   var PROXY = 'https://plugin-lampa.vercel.app/api/fetch?url=';
+  var PROXY2 = 'https://corsproxy.io/?url=';
   var PASSWORD = '0308';
 
   function request(url, callback) {
@@ -57,7 +59,7 @@
   }
 
   function requestEpisode(url, callback) {
-    fetch(PROXY + encodeURIComponent(url) + '&episode=1')
+    fetch(PROXY2 + encodeURIComponent(url))
       .then(function (r) { return r.text(); })
       .then(callback)
       .catch(function (err) { Lampa.Noty.show('Помилка: ' + err.message); });
@@ -180,13 +182,13 @@
   }
 
   function checkPassword(onSuccess) {
-    if (Lampa.Storage.get('shpet_auth') === PASSWORD) {
+    if (localStorage.getItem('shpet_auth') === PASSWORD) {
       onSuccess();
       return;
     }
     var value = window.prompt('Введіть пароль:');
     if (value === PASSWORD) {
-      Lampa.Storage.set('shpet_auth', value);
+      localStorage.setItem('shpet_auth', value);
       onSuccess();
     } else {
       Lampa.Noty.show('Невірний пароль');
@@ -213,3 +215,4 @@
   });
 
 })();
+*/
